@@ -1,0 +1,22 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Face Detect</title>
+</head>
+<link type="text/css" rel="stylesheet" href="{% static 'css/materialize.min.css' %}">
+<body>
+<div class="container-fluid">
+    <div class="row">
+        {% block content %}
+        {% endblock %}
+    </div>
+</div>
+</body>
+<script type="text/javascript" src="{% static 'js/jquery.min.js' %}"></script>
+<script type="text/javascript" src="{% static 'js/materialize.min.js' %}"></script>
+<script type="text/javascript" src="{% static 'js/formsubmit.js' %}"></script>
+{% block js %}
+{% endblock %}
+</html>

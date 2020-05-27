@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block content %}
+    <div class="col s4">
+        <div class="collection">
+            <a href="{% url 'face-detect:live_video' %}" class="collection-item active">Live Face Swapping</a>
+        </div>
+    </div>
+    <div class="col s6">
+        <div class="card">
+            <div class="card-content center-align">
+                <h4 class="center"><u>Live Video</u></h4>
+                <video id="video" width="600" height="450" autoplay></video>
+                <canvas id="canvas" width="600" height="450" class="hide"></canvas>
+                <button type="button" class="btn" id="start-stream" style="margin-bottom: 10px">Start Face Swapping
+                </button>
+                <canvas id="detect-data" width="600" height="450"></canvas>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block js %}
+    <script type="text/javascript">
+        var socket = new WebSocket('wss://rtfs-socket.ue.r.appspot.com/websocket');
+        //var socket = new WebSocket('ws://127.0.0.1:8001/websocket');
+        var sent = 0;
+        var received = 0;
+        var starttime = new Date()
+        $(document).ready(function () {
+            let video = document.getElementById('video');
+            let canvas = document.getElementById('canvas');
+            let context = canvas.getContext('2d');
+            let draw_canvas = document.getElementById('detect-data');
+            let draw_context = draw_canvas.getContext('2d');
+            let image = new Image();
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({video: true}).then(function (stream) {
+                    video.srcObject = stream;
+                    video.play();
+                });
+            }
+
+            function drawCanvas() {
+                context.drawImage(video, 0, 0, 600, 450);
+                //sendMessage(canvas.toDataURL('image/png'));
+            }
+
+            function sleep(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+
+            async function startEmission(){
+                while(socket.readyState !== WebSocket.CLOSED){
+                    await sleep(50);
+                    if(sent-received<3){
+                        sendMessage(canvas.toDataURL('image/png'));
+                        let endtime = new Date()
+                        console.log(1000*received/(endtime.getTime()-starttime.getTime()))
+                    }
+                }
+            }
+
+            document.getElementById("start-stream").addEventListener("click", function () {
+                drawCanvas();
+                startEmission();
+            });
+
+
+
+            function sendMessage(message) {
+                socket.send(message);
+                sent++;
+                console.log("Sent the frame")
+            }
+            socket.onmessage = async function (e) {
+                console.log("Received a frame")
+                received++;
+                image.onload = function () {
+                    draw_context.drawImage(image, 0, 0, 600, 450);
+                };
+                image.src = await (new Response(e.data)).text();
+                drawCanvas();
+            };
+            socket.onopen = function() {
+                console.log("Connected")
+            };
+            socket.onclose = function() {
+                console.log("Disconnected")
+            };
+        })
+    </script>
+{% endblock %}

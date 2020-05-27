@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% block content %}
+    <div class="col s4">
+        <div class="collection">
+            <a href="{% url 'face-detect:image' %}" class="collection-item">Simple Face Detection</a>
+            <a href="{% url 'face-detect:live_video' %}" class="collection-item active">Live Face Detection</a>
+        </div>
+    </div>
+    <div class="col s6">
+        <div class="card">
+            <div class="card-content center-align">
+                <h4 class="center"><u>Live Video</u></h4>
+                <video id="video" width="600" height="450" autoplay></video>
+                <canvas id="canvas" width="600" height="450" class="hide"></canvas>
+                <button type="button" class="btn" id="start-stream" style="margin-bottom: 10px">Start Face Detection
+                </button>
+                <canvas id="detect-data" width="600" height="450"></canvas>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block js %}
+    <script type="text/javascript">
+        var socket = io.connect('https://rtfs-socket.ue.r.appspot.com');
+
+        socket.on( 'connect', function() {
+            console.log('connected')
+        });
+
+        $(document).ready(function () {
+            let video = document.getElementById('video');
+            let canvas = document.getElementById('canvas');
+            let context = canvas.getContext('2d');
+            let draw_canvas = document.getElementById('detect-data');
+            let draw_context = draw_canvas.getContext('2d');
+            let image = new Image();
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({video: true}).then(function (stream) {
+                    video.srcObject = stream;
+                    video.play();
+                });
+            }
+
+            function drawCanvas() {
+                context.drawImage(video, 0, 0, 600, 450);
+                sendMessage(canvas.toDataURL('image/png'));
+            }
+
+            document.getElementById("start-stream").addEventListener("click", function () {
+                drawCanvas();
+            });
+
+            function sendMessage(message) {
+                socket.emit('send-frame', message);
+            }
+            // socket.onmessage = function (e) {
+            //     image.onload = function () {
+            //         draw_context.drawImage(image, 0, 0, 600, 450);
+            //     };
+            //     image.src = e.data;
+            //     drawCanvas();
+            // };
+            function ab2str(buf) {
+                return String.fromCharCode.apply(null, new Uint8Array(buf));
+            }
+            socket.on('frame-response', async function (e) {
+                console.log("Received a frame: "+ab2str(e))
+                image.onload = function () {
+                    draw_context.drawImage(image, 0, 0, 600, 450);
+                };
+                image.src = ab2str(e)
+                drawCanvas();
+            });
+        })
+    </script>
+{% endblock %}

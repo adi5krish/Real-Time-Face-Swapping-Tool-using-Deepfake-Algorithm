@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block content %}
+    <div class="col s4">
+            <div class="collection">
+                <a href="{% url 'face-detect:image' %}" class="collection-item active">Simple Face Detection</a>
+                <a href="{% url 'face-detect:live_video' %}" class="collection-item">Live Face Detection</a>
+            </div>
+        </div>
+    <div class="col s6">
+        <div class="card">
+            <div class="card-content center-align">
+                <form method="post" id="form-image" enctype="multipart/form-data"
+                      action="{% url 'face-detect:image' %}">
+                    {% csrf_token %}
+                    <h4 class="center"><u>Live Video</u></h4>
+                    <video id="video" width="600" height="450" autoplay></video>
+                    <canvas id="canvas" width="600" height="450" class="hide"></canvas>
+                    <input type="hidden" name="image" id="face-image">
+                    <button type="submit" class="btn" id="detect-image" style="margin-bottom: 10px">Detect Face
+                    </button>
+                    <img src="" id="detect-data" width="600" height="450" class="hide">
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block js %}
+    <script type="text/javascript">
+        $(document).ready(function () {
+            let video = document.getElementById('video');
+            let canvas = document.getElementById('canvas');
+            let context = canvas.getContext('2d');
+            let face_image = document.getElementById('face-image');
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({video: true}).then(function (stream) {
+                    video.srcObject = stream;
+                    video.play();
+                });
+            }
+
+            $.DjangoAjaxHandler2({
+                submitBtn: '#detect-image',
+                form_selector: '#form-image',
+                beforeSubmission: function (form, instance) { // after errors are cleared, preprocessing can be done here
+                    $(instance.options.submitBtn).val('loading').prop('disabled', true).addClass('disabled');
+                    context.drawImage(video, 0, 0, 600, 450);
+                    face_image.value = canvas.toDataURL('image/png');
+                },
+                postSuccess: function (form, response, instance) {
+                    form.reset();
+                    Materialize.updateTextFields();
+                    $('#detect-data').removeClass('hide').attr('src', response['image']);
+                    $(instance.options.submitBtn).val('Detect Face').prop('disabled', false).removeClass('disabled');
+                },
+            });
+        })
+    </script>
+{% endblock %}
