@@ -2,7 +2,7 @@ Django==3.0.5
 imutils==0.4.5
 numpy==1.14.5
 opencv-python==4.2.0.34
-Pillow==7.1.2
+Pillow==9.0.1
 pytz==2017.3
 six==1.10.0
 tornado==4.2
